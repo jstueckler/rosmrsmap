@@ -1,0 +1,10 @@
+<launch>
+	<master auto="start"/>
+
+  <!-- valgrind -tool=callgrind -->
+  <!-- xterm -e cgdb -args -->
+	<node launch-prefix="" pkg="rosmrsmap" type="snapshot_map" name="snapshot_map" respawn="false" output="screen" >
+	</node>
+
+	
+</launch>
