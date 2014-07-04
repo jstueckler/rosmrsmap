@@ -4,7 +4,7 @@ project(rosmrsmap)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rosconsole pcl_ros pcl_msgs pcl_conversions cv_bridge sensor_msgs genmsg mrsmap)
+find_package(catkin REQUIRED COMPONENTS roscpp rosconsole pcl_ros pcl_msgs pcl_conversions cv_bridge sensor_msgs genmsg mrsmap tf_conversions)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -34,7 +34,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES rosmrsmap
-  CATKIN_DEPENDS cv_bridge opencv2 pcl_ros pcl_conversions roscpp rospy mrsmap
+  CATKIN_DEPENDS cv_bridge opencv2 pcl_ros pcl_conversions roscpp rospy mrsmap tf_conversions
   DEPENDS system_lib
 )
 

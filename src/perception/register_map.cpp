@@ -202,11 +202,11 @@ public:
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
 
-		MultiResolutionSurfelRegistration reg;
-		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
+//		MultiResolutionSurfelRegistration reg;
+//		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
 
-//		MultiResolutionSoftSurfelRegistration reg;
-//		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100 );
+		MultiResolutionSoftSurfelRegistration reg;
+		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100 );
 
 		ROS_INFO_STREAM( "registering took " << sw.getTimeSeconds() );
 

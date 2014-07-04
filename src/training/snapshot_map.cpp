@@ -73,6 +73,7 @@
 #include <Eigen/Core>
 
 #include <tf/transform_broadcaster.h>
+#include <tf_conversions/tf_eigen.h>
 
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
@@ -152,30 +153,68 @@ public:
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudIn = pcl::PointCloud<pcl::PointXYZRGB>::Ptr( new pcl::PointCloud<pcl::PointXYZRGB>() );
 		pcl::fromROSMsg(*point_cloud, *pointCloudIn);
 
-		pointCloudIn->sensor_orientation_.setIdentity();
-		pointCloudIn->sensor_origin_.setZero();
-		pointCloudIn->sensor_origin_(3) = 1.0;
+//		Eigen::Matrix4d objectTransform = Eigen::Matrix4d::Identity();
+
+		// change reference frame of point cloud to point mean and oriented along principal axes
+		Eigen::Vector4d mean;
+		Eigen::Vector3d eigenvalues;
+		Eigen::Matrix3d cov;
+		Eigen::Matrix3d eigenvectors;
+		pcl::computeMeanAndCovarianceMatrix( *pointCloudIn, cov, mean );
+		pcl::eigen33( cov, eigenvectors, eigenvalues );
+
+		// transform from object reference frame to camera
+		Eigen::Matrix4d objectTransform = Eigen::Matrix4d::Identity();
+		objectTransform.block<3,1>(0,0) = eigenvectors.col(2);
+		objectTransform.block<3,1>(0,1) = eigenvectors.col(1);
+		objectTransform.block<3,1>(0,2) = eigenvectors.col(0);
+		objectTransform.block<3,1>(0,3) = mean.block<3,1>(0,0);
+
+		if( objectTransform.block<3,3>(0,0).determinant() < 0 ) {
+			objectTransform.block<3,1>(0,2) = -objectTransform.block<3,1>(0,2);
+		}
+
+		Eigen::Matrix4d objectTransformInv = objectTransform.inverse();
+
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr objectPointCloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr( new pcl::PointCloud<pcl::PointXYZRGB>() );
+		pcl::transformPointCloud( *pointCloudIn, *objectPointCloud, (objectTransformInv).cast<float>() );
+
+		objectPointCloud->sensor_origin_ = objectTransformInv.block<4,1>(0,3).cast<float>();
+		objectPointCloud->sensor_orientation_ = Eigen::Quaternionf( objectTransformInv.block<3,3>(0,0).cast<float>() );
 
 		treeNodeAllocator_->reset();
-		boost::shared_ptr< MultiResolutionSurfelMap > map = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( max_resolution_, max_radius_, treeNodeAllocator_ ) );
+		map_ = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( max_resolution_, max_radius_, treeNodeAllocator_ ) );
 
-		std::vector< int > pointIndices( pointCloudIn->points.size() );
+		std::vector< int > pointIndices( objectPointCloud->points.size() );
 		for( unsigned int i = 0; i < pointIndices.size(); i++ ) pointIndices[i] = i;
-		std::vector< int > imageBorderIndices;
-		map->imageAllocator_ = imageAllocator_;
-		map->addPoints( *pointCloudIn, pointIndices );
-		map->octree_->root_->establishNeighbors();
-		map->markNoUpdateAtPoints( *pointCloudIn, imageBorderIndices );
-		map->evaluateSurfels();
-		map->buildShapeTextureFeatures();
+		map_->imageAllocator_ = imageAllocator_;
+		map_->addPoints( *objectPointCloud, pointIndices );
+		map_->octree_->root_->establishNeighbors();
+		map_->evaluateSurfels();
+		map_->buildShapeTextureFeatures();
 
-		map->save( map_folder_ + "/" + object_name_ + ".map" );
+		map_->save( map_folder_ + "/" + object_name_ + ".map" );
 
-		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
-		cloudv->header = pointCloudIn->header;
-		map->visualize3DColorDistribution( cloudv, -1, -1, false );
-		pub_cloud.publish( cloudv );
 
+		cloudv = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
+		cloudv->header.frame_id = object_name_;
+		map_->visualize3DColorDistribution( cloudv, -1, -1, false );
+
+		ROS_INFO_STREAM( "objcloud has " << objectPointCloud->points.size() );
+		ROS_INFO_STREAM( "mapcloud has " << cloudv->points.size() );
+
+
+		Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
+
+		object_tf_.setIdentity();
+		object_tf_.setRotation( tf::Quaternion( q.x(), q.y(), q.z(), q.w() ) );
+		object_tf_.setOrigin( tf::Vector3( objectTransform(0,3), objectTransform(1,3), objectTransform(2,3) ) );
+
+		object_tf_.stamp_ = point_cloud->header.stamp;
+		object_tf_.child_frame_id_ = object_name_;
+		object_tf_.frame_id_ = point_cloud->header.frame_id;
+
+		tf_broadcaster.sendTransform( object_tf_ );
 
 		sub_cloud_.shutdown();
 
@@ -191,6 +230,19 @@ public:
 		status.data = responseId_;
 		pub_status_.publish( status );
 
+		if( cloudv ) {
+
+			object_tf_.stamp_ = ros::Time::now();
+			tf_broadcaster.sendTransform( object_tf_ );
+
+			std_msgs::Header header;
+			header.frame_id = object_name_;
+			header.stamp = object_tf_.stamp_;
+			cloudv->header = pcl_conversions::toPCL( header );
+			pub_cloud.publish( cloudv );
+		}
+
+
 	}
 
 
@@ -201,6 +253,7 @@ public:
 	ros::Publisher pub_status_;
 	pcl_ros::Publisher<pcl::PointXYZRGB> pub_cloud;
 	boost::shared_ptr< tf::TransformListener > tf_listener_;
+	tf::TransformBroadcaster tf_broadcaster;
 
 	double max_resolution_, max_radius_;
 
@@ -210,6 +263,11 @@ public:
 
 	std::string map_folder_;
 	std::string object_name_;
+
+	boost::shared_ptr< MultiResolutionSurfelMap > map_;
+	tf::StampedTransform object_tf_;
+
+	pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv;
 
 	boost::shared_ptr< MultiResolutionSurfelMap::ImagePreAllocator > imageAllocator_;
 	boost::shared_ptr< spatialaggregate::OcTreeNodeDynamicAllocator< float, MultiResolutionSurfelMap::NodeValue > > treeNodeAllocator_;
@@ -226,7 +284,7 @@ int main(int argc, char** argv) {
 	ros::NodeHandle n("snapshot_map");
 	SnapshotMap sm( n );
 
-	ros::Rate r( 30 );
+	ros::Rate r( 100 );
 	while( ros::ok() ) {
 
 		sm.update();
