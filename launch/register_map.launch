@@ -5,7 +5,7 @@
 
   	<!-- valgrind -tool=callgrind -->
 	 <!-- xterm -e cgdb -args -->
-	<node launch-prefix="" pkg="rosmrsmap" type="snapshot_map" name="snapshot_map" respawn="false" output="screen" >
+	<node launch-prefix="" pkg="rosmrsmap" type="register_map" name="register_map" respawn="false" output="screen" >
 		<param name="map_folder" value="$(arg map_folder)" />
 		<remap from="~input_cloud" to="$(arg input_cloud_topic)" />
 	</node>

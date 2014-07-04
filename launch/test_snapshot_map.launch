@@ -1,0 +1,17 @@
+<launch>
+
+	<include file="$(find ros_openni2_multicam)/launch/test.launch" />
+
+	<include file="$(find spacebot_kinect)/launch/segmentation.launch">
+		<arg name="configfile" value="$(find rosmrsmap)/launch/config_segmentation.yaml" />
+	</include>
+
+	<node pkg="tf" type="static_transform_publisher" name="base_link" args="0 0 1.2 0 1.0 3.14 base_link camera_link 100" />
+
+	<include file="$(find rosmrsmap)/launch/snapshot_map.launch">
+		<arg name="map_folder" value="$(find rosmrsmap)/maps" />
+		<arg name="input_cloud_topic" value="/segmentation_node/closest_object_cloud" />
+	</include>
+
+	
+</launch>

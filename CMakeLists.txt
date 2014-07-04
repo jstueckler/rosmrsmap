@@ -51,5 +51,11 @@ add_dependencies(snapshot_map rosmrsmap_gencpp)
 target_link_libraries(snapshot_map  ${catkin_LIBRARIES})
 
 
+add_executable(register_map src/perception/register_map.cpp )
+add_dependencies(register_map rosmrsmap_gencpp)
+target_link_libraries(register_map  ${catkin_LIBRARIES})
+
+
+
 
 

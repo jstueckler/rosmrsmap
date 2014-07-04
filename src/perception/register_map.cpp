@@ -1,8 +1,8 @@
 /*
  * Software License Agreement (BSD License)
  *
- *  Copyright (c) 2013, University of Bonn, Computer Science Institute VI
- *  Author: Joerg Stueckler, 13.06.2013
+ *  Copyright (c) 2014, University of Bonn, Computer Science Institute VI
+ *  Author: Joerg Stueckler, 03.07.2014
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -79,11 +79,13 @@
 
 #include <mrsmap/map/multiresolution_surfel_map.h>
 #include <mrsmap/registration/multiresolution_surfel_registration.h>
+#include <mrsmap/registration/multiresolution_soft_surfel_registration.h>
 
 
 #include <boost/thread/thread.hpp>
 #include "pcl/common/common_headers.h"
 #include "pcl/visualization/pcl_visualizer.h"
+#include "pcl/common/time.h"
 
 
 #include "pcl/common/centroid.h"
@@ -98,43 +100,62 @@ using namespace mrsmap;
 
 
 
-class SnapshotMap
+class RegisterMap
 {
 public:
 
-    SnapshotMap( ros::NodeHandle& nh ) : nh_( nh ) {
+    RegisterMap( ros::NodeHandle& nh ) : nh_( nh ) {
 
 		imageAllocator_ = boost::shared_ptr< MultiResolutionSurfelMap::ImagePreAllocator >( new MultiResolutionSurfelMap::ImagePreAllocator() );
 		treeNodeAllocator_ = boost::shared_ptr< spatialaggregate::OcTreeNodeDynamicAllocator< float, MultiResolutionSurfelMap::NodeValue > >( new spatialaggregate::OcTreeNodeDynamicAllocator< float, MultiResolutionSurfelMap::NodeValue >( 10000 ) );
 
-		snapshot_service_ = nh.advertiseService("snapshot", &SnapshotMap::snapshotRequest, this);
-		pub_cloud = pcl_ros::Publisher<pcl::PointXYZRGB>(nh, "output_cloud", 1);
+		register_service_ = nh.advertiseService("register", &RegisterMap::registerRequest, this);
+		pub_model_cloud = pcl_ros::Publisher<pcl::PointXYZRGB>(nh, "model_cloud", 1);
+		pub_scene_cloud = pcl_ros::Publisher<pcl::PointXYZRGB>(nh, "scene_cloud", 1);
 
 		pub_status_ = nh.advertise< std_msgs::Int32 >( "status", 1 );
 
 		tf_listener_ = boost::shared_ptr< tf::TransformListener >( new tf::TransformListener() );
 
-		nh.param<double>( "max_resolution", max_resolution_, 0.0125 );
-		nh.param<double>( "max_radius", max_radius_, 30.0 );
-
 		nh.param<std::string>( "map_folder", map_folder_, "." );
 
-		create_map_ = false;
+
+		register_map_ = false;
 
 		responseId_ = -1;
 
     }
 
 
-	bool snapshotRequest( rosmrsmap::StringService::Request &req, rosmrsmap::StringService::Response &res ) {
+	bool registerRequest( rosmrsmap::StringService::Request &req, rosmrsmap::StringService::Response &res ) {
 
 		object_name_ = req.str;
-		sub_cloud_ = nh_.subscribe( "input_cloud", 1, &SnapshotMap::dataCallback, this );
-		create_map_ = true;
 
-		ROS_INFO_STREAM( "subscribed at " << sub_cloud_.getTopic() );
+		if( object_name_ == "" ) {
+			sub_cloud_.shutdown();
+			register_map_ = false;
+		}
+		else {
 
-		res.responseId = responseId_ + 1;
+			ROS_INFO("loading map");
+
+			map_ = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( 0.0125f, 30.f ) );
+			map_->load( map_folder_ + "/" + object_name_ + ".map" );
+			map_->octree_->root_->establishNeighbors();
+			map_->evaluateSurfels();
+			map_->buildShapeTextureFeatures();
+
+			map_->extents( model_mean_, model_cov_ );
+
+			sub_cloud_ = nh_.subscribe( "input_cloud", 1, &RegisterMap::dataCallback, this );
+			register_map_ = true;
+
+			ROS_INFO_STREAM( "subscribed at " << sub_cloud_.getTopic() );
+
+		}
+
+		responseId_++;
+		res.responseId = responseId_;
 
 		return true;
 
@@ -143,53 +164,73 @@ public:
 
 	void dataCallback(const sensor_msgs::PointCloud2ConstPtr& point_cloud) {
 
-		if( !create_map_ )
+		if( !register_map_ )
 			return;
 
-		ROS_INFO("creating map");
+		ROS_INFO("registering");
+		pcl::StopWatch sw;
 
 
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudIn = pcl::PointCloud<pcl::PointXYZRGB>::Ptr( new pcl::PointCloud<pcl::PointXYZRGB>() );
 		pcl::fromROSMsg(*point_cloud, *pointCloudIn);
 
-		pointCloudIn->sensor_orientation_.setIdentity();
-		pointCloudIn->sensor_origin_.setZero();
-		pointCloudIn->sensor_origin_(3) = 1.0;
 
+		// create mrsmap from pointcloud
 		treeNodeAllocator_->reset();
-		boost::shared_ptr< MultiResolutionSurfelMap > map = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( max_resolution_, max_radius_, treeNodeAllocator_ ) );
+		boost::shared_ptr< MultiResolutionSurfelMap > currMap = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( map_->min_resolution_, map_->max_range_, treeNodeAllocator_ ) );
 
 		std::vector< int > pointIndices( pointCloudIn->points.size() );
 		for( unsigned int i = 0; i < pointIndices.size(); i++ ) pointIndices[i] = i;
+
 		std::vector< int > imageBorderIndices;
-		map->imageAllocator_ = imageAllocator_;
-		map->addPoints( *pointCloudIn, pointIndices );
-		map->octree_->root_->establishNeighbors();
-		map->markNoUpdateAtPoints( *pointCloudIn, imageBorderIndices );
-		map->evaluateSurfels();
-		map->buildShapeTextureFeatures();
+		currMap->addPoints( *pointCloudIn, pointIndices );
+		currMap->octree_->root_->establishNeighbors();
+		currMap->markNoUpdateAtPoints( *pointCloudIn, imageBorderIndices );
+		currMap->evaluateSurfels();
+		currMap->buildShapeTextureFeatures();
 
-		map->save( map_folder_ + "/" + object_name_ + ".map" );
+		// register scene to model
+		Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
 
+		// initialize alignment by shifting the map centroids
+		Eigen::Vector3d scene_mean;
+		Eigen::Matrix3d scene_cov;
+		currMap->extents( scene_mean, scene_cov );
+
+		transform.block<3,1>(0,3) = model_mean_ - scene_mean;
+
+		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
+		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
+
+		MultiResolutionSurfelRegistration reg;
+		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
+
+//		MultiResolutionSoftSurfelRegistration reg;
+//		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100 );
+
+		ROS_INFO_STREAM( "registering took " << sw.getTimeSeconds() );
+
+		// visualize model
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
 		cloudv->header = pointCloudIn->header;
-		map->visualize3DColorDistribution( cloudv, -1, -1, false );
-		pub_cloud.publish( cloudv );
+		map_->visualize3DColorDistribution( cloudv, -1, -1, false );
+		pub_model_cloud.publish( cloudv );
 
+		// visualize scene
+		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv2 = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
+		cloudv2->header = pointCloudIn->header;
+		currMap->visualize3DColorDistribution( cloudv2, -1, -1, false );
+		pcl::transformPointCloud( *cloudv2, *cloudv2, transform );
+		pub_scene_cloud.publish( cloudv2 );
 
-		sub_cloud_.shutdown();
-
-		create_map_ = false;
-
-		responseId_++;
+		std_msgs::Int32 status;
+		status.data = responseId_;
+		pub_status_.publish( status );
 
 	}
 
 	void update() {
 
-		std_msgs::Int32 status;
-		status.data = responseId_;
-		pub_status_.publish( status );
 
 	}
 
@@ -199,14 +240,16 @@ public:
 	ros::NodeHandle nh_;
 	ros::Subscriber sub_cloud_;
 	ros::Publisher pub_status_;
-	pcl_ros::Publisher<pcl::PointXYZRGB> pub_cloud;
+	pcl_ros::Publisher<pcl::PointXYZRGB> pub_model_cloud, pub_scene_cloud;
 	boost::shared_ptr< tf::TransformListener > tf_listener_;
 
-	double max_resolution_, max_radius_;
+	bool register_map_;
 
-	bool create_map_;
+	boost::shared_ptr< MultiResolutionSurfelMap > map_;
+	Eigen::Vector3d model_mean_;
+	Eigen::Matrix3d model_cov_;
 
-	ros::ServiceServer snapshot_service_;
+	ros::ServiceServer register_service_;
 
 	std::string map_folder_;
 	std::string object_name_;
@@ -222,9 +265,9 @@ public:
 
 int main(int argc, char** argv) {
 
-	ros::init(argc, argv, "snapshot_map");
-	ros::NodeHandle n("snapshot_map");
-	SnapshotMap sm( n );
+	ros::init(argc, argv, "register_map");
+	ros::NodeHandle n("register_map");
+	RegisterMap sm( n );
 
 	ros::Rate r( 30 );
 	while( ros::ok() ) {

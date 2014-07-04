@@ -1,0 +1,37 @@
+## pixel region for computing normals
+normal_estimation:
+  support_size: 2               # number of neighbors (in each direction) for computing normals, 2 is enough, more points smooth normals
+
+## support plane (largest horizontal plane in specified range)
+##  - limiting the search space (height) in which it is searched for a support plane
+##  - mininum number of points per support plane
+support_plane:
+  limit_search_space:   true
+  min_height:           -0.5
+  max_height:           1.0
+  min_points:           200
+  reduce_plane_size:    false    # whether or not convex hull is made smaller to ignore points at boundaries
+  reduce_plane_size_by: -0.025   # the border size in m (negative value -> smaller, positive value -> plane is enlarged) 
+
+## allowed deviations for finding horizontal points and fitting planes (distance in m, angle in deg)
+plane_fit:
+  distance_deviation:   0.025
+  axis_deviation:       20
+
+## object_clusters: how objects on the support are clustered
+object_clusters:
+  distance_tolerance:    0.04   # points within this distance are merged (in m).
+  min_points:            15     # minimum number of points per cluster
+  min_height:            0.02   # min height of points on support plane (in m)
+  max_height:            0.5    # max height of points on support plane (in m)
+  max_distance_to_plane: 1.0    # set to ridiculously large value if you want to have objects "flying" above the plane 
+
+## box filter: horizontal points outside of box are ignored (in m, in base link!)
+box_filter:
+  enable:  true
+  min_x:   0.0
+  max_x:   1.0
+  min_y:  -1.0
+  max_y:   1.0
+  min_z:  -0.6
+  max_z:   1.0
