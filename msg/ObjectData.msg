@@ -1,0 +1,6 @@
+Header header
+sensor_msgs/Image image_rgb
+sensor_msgs/Image image_depth
+float32 constant
+geometry_msgs/PoseStamped mocap_camera_pose
+geometry_msgs/PoseStamped[] mocap_object_pose

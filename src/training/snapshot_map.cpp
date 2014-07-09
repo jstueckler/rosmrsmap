@@ -118,6 +118,8 @@ public:
 		nh.param<double>( "max_resolution", max_resolution_, 0.0125 );
 		nh.param<double>( "max_radius", max_radius_, 30.0 );
 
+		nh.param<double>( "dist_dep_factor", dist_dep_, 0.005 );
+
 		nh.param<std::string>( "map_folder", map_folder_, "." );
 
 		create_map_ = false;
@@ -163,6 +165,9 @@ public:
 		pcl::computeMeanAndCovarianceMatrix( *pointCloudIn, cov, mean );
 		pcl::eigen33( cov, eigenvectors, eigenvalues );
 
+		if( Eigen::Vector3d(eigenvectors.col(0)).dot( Eigen::Vector3d::UnitZ() ) > 0.0 )
+			eigenvectors.col(0) = (-eigenvectors.col(0)).eval();
+
 		// transform from object reference frame to camera
 		Eigen::Matrix4d objectTransform = Eigen::Matrix4d::Identity();
 		objectTransform.block<3,1>(0,0) = eigenvectors.col(2);
@@ -171,7 +176,7 @@ public:
 		objectTransform.block<3,1>(0,3) = mean.block<3,1>(0,0);
 
 		if( objectTransform.block<3,3>(0,0).determinant() < 0 ) {
-			objectTransform.block<3,1>(0,2) = -objectTransform.block<3,1>(0,2);
+			objectTransform.block<3,1>(0,0) = -objectTransform.block<3,1>(0,0);
 		}
 
 		Eigen::Matrix4d objectTransformInv = objectTransform.inverse();
@@ -185,6 +190,8 @@ public:
 		treeNodeAllocator_->reset();
 		map_ = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( max_resolution_, max_radius_, treeNodeAllocator_ ) );
 
+		map_->params_.dist_dependency = dist_dep_;
+
 		std::vector< int > pointIndices( objectPointCloud->points.size() );
 		for( unsigned int i = 0; i < pointIndices.size(); i++ ) pointIndices[i] = i;
 		map_->imageAllocator_ = imageAllocator_;
@@ -195,13 +202,20 @@ public:
 
 		map_->save( map_folder_ + "/" + object_name_ + ".map" );
 
+		{
+			Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
+
+			std::ofstream initPoseFile( map_folder_ + "/" + object_name_ + ".pose" );
+			initPoseFile << "# x y z qx qy qz qw" << std::endl;
+			initPoseFile << objectTransform(0,3) << " " << objectTransform(1,3) << " " << objectTransform(2,3) << " "
+					 << q.x() << " " << q.y() << " " << q.z() << " "  << q.w() << std::endl;
+			initPoseFile << "# init_pose: { position: { x: " << objectTransform(0,3) << ", y: " << objectTransform(1,3) << ", z: " << objectTransform(2,3)
+					<< " }, orientation: { x: " << q.x() << ", y: " << q.y() << ", z: " << q.z() << ", w: " << q.w() << " } } }" << std::endl;
+		}
 
 		cloudv = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
 		cloudv->header.frame_id = object_name_;
 		map_->visualize3DColorDistribution( cloudv, -1, -1, false );
-
-		ROS_INFO_STREAM( "objcloud has " << objectPointCloud->points.size() );
-		ROS_INFO_STREAM( "mapcloud has " << cloudv->points.size() );
 
 
 		Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
@@ -255,7 +269,7 @@ public:
 	boost::shared_ptr< tf::TransformListener > tf_listener_;
 	tf::TransformBroadcaster tf_broadcaster;
 
-	double max_resolution_, max_radius_;
+	double max_resolution_, max_radius_, dist_dep_;
 
 	bool create_map_;
 

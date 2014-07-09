@@ -4,24 +4,44 @@ project(rosmrsmap)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rosconsole pcl_ros pcl_msgs pcl_conversions cv_bridge sensor_msgs genmsg mrsmap tf_conversions)
+find_package(catkin REQUIRED COMPONENTS roscpp rosconsole pcl_ros pcl_msgs pcl_conversions cv_bridge sensor_msgs genmsg mrsmap tf_conversions eigen_conversions)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH})
+
+
+# G2O required
+find_package(G2O REQUIRED)
+include_directories(${G2O_INCLUDE_DIR})
+
+find_package( Boost 1.40 COMPONENTS program_options REQUIRED )
+include_directories( ${Boost_INCLUDE_DIR} )
+
+
+# For building the CHOLMOD / CSPARSE solvers
+find_package(Cholmod)
+find_package(BLAS)
+find_package(LAPACK)
+find_package(CSparse)
+include_directories(${CSPARSE_INCLUDE_DIR})
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 # catkin_python_setup()
 
-#add_message_files(
-#   FILES
-# )
+add_message_files(
+  FILES
+  ObjectData.msg
+)
 
 add_service_files(
   FILES
   StringService.srv
+  RegisterMap.srv
 )
 
 generate_messages(
@@ -34,7 +54,7 @@ generate_messages(
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES rosmrsmap
-  CATKIN_DEPENDS cv_bridge opencv2 pcl_ros pcl_conversions roscpp rospy mrsmap tf_conversions
+  CATKIN_DEPENDS cv_bridge opencv2 pcl_ros pcl_conversions roscpp rospy mrsmap tf_conversions eigen_conversions
   DEPENDS system_lib
 )
 
@@ -54,6 +74,16 @@ target_link_libraries(snapshot_map  ${catkin_LIBRARIES})
 add_executable(register_map src/perception/register_map.cpp )
 add_dependencies(register_map rosmrsmap_gencpp)
 target_link_libraries(register_map  ${catkin_LIBRARIES})
+
+
+add_executable(collect_data src/training/collect_data.cpp )
+add_dependencies(collect_data rosmrsmap_gencpp)
+target_link_libraries(collect_data  ${catkin_LIBRARIES})
+
+
+add_executable(train_map_from_data src/training/train_map_from_data.cpp src/utilities/utilities.cpp)
+add_dependencies(train_map_from_data rosmrsmap_gencpp)
+target_link_libraries(train_map_from_data mrsslam ${catkin_LIBRARIES})
 
 
 

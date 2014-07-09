@@ -22,7 +22,7 @@ plane_fit:
 object_clusters:
   distance_tolerance:    0.04   # points within this distance are merged (in m).
   min_points:            15     # minimum number of points per cluster
-  min_height:            0.02   # min height of points on support plane (in m)
+  min_height:            0.04   # min height of points on support plane (in m)
   max_height:            0.5    # max height of points on support plane (in m)
   max_distance_to_plane: 1.0    # set to ridiculously large value if you want to have objects "flying" above the plane 
 

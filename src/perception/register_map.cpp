@@ -73,6 +73,8 @@
 #include <Eigen/Core>
 
 #include <tf/transform_broadcaster.h>
+#include <tf_conversions/tf_eigen.h>
+#include <eigen_conversions/eigen_msg.h>
 
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/surface/convex_hull.h>
@@ -92,7 +94,7 @@
 #include "pcl/common/eigen.h"
 
 
-#include <rosmrsmap/StringService.h>
+#include <rosmrsmap/RegisterMap.h>
 #include <std_msgs/Int32.h>
 
 
@@ -119,6 +121,7 @@ public:
 
 		nh.param<std::string>( "map_folder", map_folder_, "." );
 
+		nh.param<double>( "dist_dep_factor", dist_dep_, 0.005 );
 
 		register_map_ = false;
 
@@ -127,9 +130,10 @@ public:
     }
 
 
-	bool registerRequest( rosmrsmap::StringService::Request &req, rosmrsmap::StringService::Response &res ) {
+	bool registerRequest( rosmrsmap::RegisterMap::Request &req, rosmrsmap::RegisterMap::Response &res ) {
 
-		object_name_ = req.str;
+		object_name_ = req.object_name;
+		tf::poseMsgToEigen( req.init_pose, initial_pose_ );
 
 		if( object_name_ == "" ) {
 			sub_cloud_.shutdown();
@@ -179,6 +183,8 @@ public:
 		treeNodeAllocator_->reset();
 		boost::shared_ptr< MultiResolutionSurfelMap > currMap = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( map_->min_resolution_, map_->max_range_, treeNodeAllocator_ ) );
 
+		currMap->params_.dist_dependency = dist_dep_;
+
 		std::vector< int > pointIndices( pointCloudIn->points.size() );
 		for( unsigned int i = 0; i < pointIndices.size(); i++ ) pointIndices[i] = i;
 
@@ -190,14 +196,20 @@ public:
 		currMap->buildShapeTextureFeatures();
 
 		// register scene to model
-		Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
+//		Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
+		Eigen::Matrix4d transform = initial_pose_.matrix().inverse();
 
 		// initialize alignment by shifting the map centroids
 		Eigen::Vector3d scene_mean;
 		Eigen::Matrix3d scene_cov;
 		currMap->extents( scene_mean, scene_cov );
 
-		transform.block<3,1>(0,3) = model_mean_ - scene_mean;
+		Eigen::Vector4d scene_mean4;
+		scene_mean4.head<3>() = scene_mean;
+		scene_mean4(3) = 1.0;
+		Eigen::Vector4d Tscene_mean4 = transform * scene_mean4;
+
+		transform.block<3,1>(0,3) += model_mean_ - Tscene_mean4.head<3>();
 
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
@@ -214,18 +226,34 @@ public:
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
 		cloudv->header = pointCloudIn->header;
 		map_->visualize3DColorDistribution( cloudv, -1, -1, false );
+		pcl::transformPointCloud( *cloudv, *cloudv, transform.inverse().cast<float>() );
 		pub_model_cloud.publish( cloudv );
 
 		// visualize scene
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv2 = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
 		cloudv2->header = pointCloudIn->header;
 		currMap->visualize3DColorDistribution( cloudv2, -1, -1, false );
-		pcl::transformPointCloud( *cloudv2, *cloudv2, transform );
+//		pcl::transformPointCloud( *cloudv2, *cloudv2, transform );
 		pub_scene_cloud.publish( cloudv2 );
 
 		std_msgs::Int32 status;
 		status.data = responseId_;
 		pub_status_.publish( status );
+
+
+		Eigen::Matrix4d objectTransform = transform.inverse();
+		Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
+
+		tf::StampedTransform object_tf;
+		object_tf.setIdentity();
+		object_tf.setRotation( tf::Quaternion( q.x(), q.y(), q.z(), q.w() ) );
+		object_tf.setOrigin( tf::Vector3( objectTransform(0,3), objectTransform(1,3), objectTransform(2,3) ) );
+
+		object_tf.stamp_ = point_cloud->header.stamp;
+		object_tf.child_frame_id_ = object_name_;
+		object_tf.frame_id_ = point_cloud->header.frame_id;
+
+		tf_broadcaster.sendTransform( object_tf );
 
 	}
 
@@ -242,6 +270,7 @@ public:
 	ros::Publisher pub_status_;
 	pcl_ros::Publisher<pcl::PointXYZRGB> pub_model_cloud, pub_scene_cloud;
 	boost::shared_ptr< tf::TransformListener > tf_listener_;
+	tf::TransformBroadcaster tf_broadcaster;
 
 	bool register_map_;
 
@@ -253,6 +282,9 @@ public:
 
 	std::string map_folder_;
 	std::string object_name_;
+	Eigen::Affine3d initial_pose_;
+
+	double dist_dep_;
 
 	boost::shared_ptr< MultiResolutionSurfelMap::ImagePreAllocator > imageAllocator_;
 	boost::shared_ptr< spatialaggregate::OcTreeNodeDynamicAllocator< float, MultiResolutionSurfelMap::NodeValue > > treeNodeAllocator_;

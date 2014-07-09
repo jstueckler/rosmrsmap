@@ -1,0 +1,16 @@
+<launch>
+
+	<arg name="data_folder" default="." />
+	<arg name="data_file" default="rgbd.bag" />
+	<arg name="input_cloud_topic" default="/camera/depth_registered/points" />
+	
+	<include file="$(find ros_openni2_multicam)/launch/test.launch" />
+
+	<node launch-prefix="" pkg="rosmrsmap" type="collect_data" name="collect_data" respawn="false" output="screen" >
+		<param name="data_folder" value="$(arg data_folder)" />
+		<param name="data_file" value="$(arg data_file)" />
+		<remap from="~input_cloud" to="$(arg input_cloud_topic)" />
+	</node>
+
+</launch>
+

@@ -1,0 +1,19 @@
+<launch>
+	<master auto="start"/>
+
+  <!-- valgrind -tool=callgrind -->
+  <!-- xterm -e cgdb -args -->
+	<node launch-prefix="" pkg="rosmrsmap" type="train_map_from_data" name="train_map_from_data" respawn="false" output="screen" >
+		<param name="object" value="slam_starter" />
+		<param name="map_folder" value="$(find rosmrsmap)/maps" />
+		<param name="bag_name" value="rgbd.bag" />
+		<param name="data_folder" value="/home/stueckler/.ros" />
+		<param name="start_frame" value="0" />
+		<param name="end_frame" value="800" />
+		<param name="max_resolution" value="0.005" />
+		<param name="dist_dep_factor" value="0.005" />
+		
+	</node>
+
+	
+</launch>
