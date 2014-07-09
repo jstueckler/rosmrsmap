@@ -80,9 +80,13 @@
 #include <pcl/surface/convex_hull.h>
 
 #include <mrsmap/map/multiresolution_surfel_map.h>
-#include <mrsmap/registration/multiresolution_surfel_registration.h>
-#include <mrsmap/registration/multiresolution_soft_surfel_registration.h>
 
+#define SOFT_REGISTRATION 0
+#if SOFT_REGISTRATION
+#include <mrsmap/registration/multiresolution_soft_surfel_registration.h>
+#else
+#include <mrsmap/registration/multiresolution_surfel_registration.h>
+#endif
 
 #include <boost/thread/thread.hpp>
 #include "pcl/common/common_headers.h"
@@ -214,11 +218,13 @@ public:
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
 
-//		MultiResolutionSurfelRegistration reg;
-//		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
-
+#if SOFT_REGISTRATION
 		MultiResolutionSoftSurfelRegistration reg;
 		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100 );
+#else
+		MultiResolutionSurfelRegistration reg;
+		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
+#endif
 
 		ROS_INFO_STREAM( "registering took " << sw.getTimeSeconds() );
 
