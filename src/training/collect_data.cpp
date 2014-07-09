@@ -213,7 +213,18 @@ public:
 		img_depth.header = point_cloud->header;
 		img_depth.encoding = "32FC1";
 
-		pointCloudToImages( pointCloudIn, img_rgb.image, img_depth.image );
+
+		if( pointCloudIn->height == 1 ) {
+
+			img_rgb.image = cv::Mat( 480, 640, CV_8UC3, 0.f );
+			img_depth.image = cv::Mat( 480, 640, CV_32FC1, std::numeric_limits<float>::quiet_NaN() );
+			reprojectPointCloudToImagesF( pointCloudIn, img_rgb.image, img_depth.image );
+
+		}
+		else {
+			pointCloudToImages( pointCloudIn, img_rgb.image, img_depth.image );
+		}
+
 
 		has_image_ = true;
 

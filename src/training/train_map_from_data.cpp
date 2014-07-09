@@ -153,6 +153,10 @@ public:
 			rosmrsmap::ObjectData::ConstPtr objectData = m.instantiate< rosmrsmap::ObjectData >();
 			if( objectData != NULL ) {
 
+	    		unsigned int numEdges = slam_.optimizer_->edges().size();
+				unsigned int numVertices = slam_.optimizer_->vertices().size();
+				unsigned int referenceID = slam_.referenceKeyFrameId_;
+
 				if( frames >= start_frame_ && frames <= end_frame_ ) {
 
 					std::cout << "processing frame " << frames << "\n";
@@ -170,11 +174,19 @@ public:
 
 					}
 
-					viewer->displayPointCloud( "rgbd", cloud );
+//					viewer->displayPointCloud( "rgbd", cloud );
 
 					cv::Mat img_rgb;
 					bool retVal = slam_.addImage( img_rgb, cloud, register_start_resolution, register_stop_resolution, min_resolution_, true );
 
+
+					if( slam_.optimizer_->vertices().size() > 0 ) {
+						g2o::VertexSE3* v_ref = dynamic_cast< g2o::VertexSE3* >( slam_.optimizer_->vertex( slam_.keyFrames_[ slam_.referenceKeyFrameId_ ]->nodeId_ ) );
+						Eigen::Matrix4d pose_ref = v_ref->estimate().matrix();
+
+						viewer->displayPose( pose_ref * slam_.lastTransform_ );
+
+					}
 				}
 
 
@@ -185,6 +197,9 @@ public:
 
 				if( viewer->viewer->wasStopped() )
 					exit(-1);
+
+				if( slam_.optimizer_->vertices().size() != numVertices || slam_.optimizer_->edges().size() != numEdges || slam_.referenceKeyFrameId_ != referenceID )
+					graphChanged = true;
 
 				if( graphChanged || forceRedraw ) {
 					viewer->visualizeSLAMGraph();
@@ -201,7 +216,7 @@ public:
 
 		bag.close();
 
-		viewer->viewer->removePointCloud( "rgbd" );
+//		viewer->viewer->removePointCloud( "rgbd" );
 
 		Eigen::Matrix4d transformGuess;
 		transformGuess.setIdentity();
