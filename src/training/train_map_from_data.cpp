@@ -248,10 +248,51 @@ public:
 		}
 
 
-		Eigen::Matrix4d referenceTransform = Eigen::Matrix4d::Identity();
-		boost::shared_ptr< MultiResolutionSurfelMap > graphMap = slam_.getMap( referenceTransform, min_resolution_ );
+		Eigen::Matrix4d objectTransform = Eigen::Matrix4d::Identity();
 
-		graphMap->save( map_folder_ + "/" + object_name_ );
+		boost::shared_ptr< pcl::PointCloud< pcl::PointXYZRGB > > mapCloud = slam_.getMapCloud( objectTransform );
+
+		// change reference frame of point cloud to point mean and oriented along principal axes
+		Eigen::Vector4d mean;
+		Eigen::Vector3d eigenvalues;
+		Eigen::Matrix3d cov;
+		Eigen::Matrix3d eigenvectors;
+		pcl::computeMeanAndCovarianceMatrix( *mapCloud, cov, mean );
+		pcl::eigen33( cov, eigenvectors, eigenvalues );
+
+		if( Eigen::Vector3d(eigenvectors.col(0)).dot( Eigen::Vector3d::UnitZ() ) > 0.0 )
+			eigenvectors.col(0) = (-eigenvectors.col(0)).eval();
+
+		// transform from object reference frame to camera
+		objectTransform = Eigen::Matrix4d::Identity();
+		objectTransform.block<3,1>(0,0) = eigenvectors.col(2);
+		objectTransform.block<3,1>(0,1) = eigenvectors.col(1);
+		objectTransform.block<3,1>(0,2) = eigenvectors.col(0);
+		objectTransform.block<3,1>(0,3) = mean.block<3,1>(0,0);
+
+		if( objectTransform.block<3,3>(0,0).determinant() < 0 ) {
+			objectTransform.block<3,1>(0,0) = -objectTransform.block<3,1>(0,0);
+		}
+
+		Eigen::Matrix4d objectTransformInv = objectTransform.inverse();
+
+
+		boost::shared_ptr< MultiResolutionSurfelMap > graphMap = slam_.getMap( objectTransformInv, min_resolution_ );
+
+		graphMap->save( map_folder_ + "/" + object_name_ + ".map" );
+
+
+		{
+			Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
+
+			std::ofstream initPoseFile( map_folder_ + "/" + object_name_ + ".pose" );
+			initPoseFile << "# x y z qx qy qz qw" << std::endl;
+			initPoseFile << objectTransform(0,3) << " " << objectTransform(1,3) << " " << objectTransform(2,3) << " "
+					 << q.x() << " " << q.y() << " " << q.z() << " "  << q.w() << std::endl;
+			initPoseFile << "# init_pose: { position: { x: " << objectTransform(0,3) << ", y: " << objectTransform(1,3) << ", z: " << objectTransform(2,3)
+					<< " }, orientation: { x: " << q.x() << ", y: " << q.y() << ", z: " << q.z() << ", w: " << q.w() << " } } }" << std::endl;
+		}
+
 
 		while( !viewer->viewer->wasStopped() ) {
 
