@@ -83,7 +83,7 @@ target_link_libraries(collect_data  ${catkin_LIBRARIES})
 
 add_executable(train_map_from_data src/training/train_map_from_data.cpp src/utilities/utilities.cpp)
 add_dependencies(train_map_from_data rosmrsmap_gencpp)
-target_link_libraries(train_map_from_data mrsslam ${catkin_LIBRARIES})
+target_link_libraries(train_map_from_data ${catkin_LIBRARIES} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D})
 
 
 
