@@ -1,0 +1,31 @@
+<launch>
+	<master auto="start"/>
+
+	<arg name="publish_base_link" default="0" />
+
+	<node launch-prefix="" pkg="rosmrsmap" type="object_tracking_node" name="object_tracking_node" respawn="false" output="screen" >
+		<param name="object" value="chair" />
+        
+		<remap from="~input_cloud" to="/camera/depth_registered/points" />
+	</node>
+
+	<node launch-prefix="" pkg="rosmrsmap" type="snapshot_map" name="snapshot_map" respawn="false" output="screen" >
+		<remap from="~input_cloud" to="/segmentation_node/closest_object_cloud" />
+	</node>
+
+        <include file="$(find nimbro_kinect)/launch/camera.launch">
+                <arg name="depth_mode" value="2" />
+        </include>
+
+        <include file="$(find nimbro_kinect)/launch/segmentation.launch">
+           <arg name="cloud_subsample_factor" value="4" />
+        </include>
+
+        <node if="$(arg publish_base_link)" pkg="tf" type="static_transform_publisher" name="kinect_base_link_fake" args="0 0 1.2 0 1.0 0 /base_link /openni_link 100" />
+
+        <node launch-prefix="" pkg="nimbro_objectperception" type="multi_object_tracker_node" name="multi_object_tracker" respawn="true" >
+        </node>
+	
+	
+	
+</launch>
