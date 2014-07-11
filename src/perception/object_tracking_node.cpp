@@ -51,7 +51,13 @@
 #include <rosmrsmap/ObjectTrackingData2.h>
 
 #include <mrsmap/map/multiresolution_surfel_map.h>
+
+#define SOFT_REGISTRATION 0
+#if SOFT_REGISTRATION
+#include <mrsmap/registration/multiresolution_soft_surfel_registration.h>
+#else
 #include <mrsmap/registration/multiresolution_surfel_registration.h>
+#endif
 
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
@@ -211,17 +217,26 @@ public:
 
 			pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
 			pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
-			MultiResolutionSurfelRegistration reg;
 
-			Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
-			Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
-			prior_pose_variances(3) = prior_pose_variances(4) = 0.0001;
-			reg.setPriorPose( true, prior_pose_mean, prior_pose_variances );
+#if SOFT_REGISTRATION
+		MultiResolutionSoftSurfelRegistration reg;
 
+		Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
+		Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
+		prior_pose_variances(3) = prior_pose_variances(4) = 0.0001;
+		reg.setPriorPose( true, prior_pose_mean, prior_pose_variances );
 
-			bool retVal = reg.estimateTransformation( *map_, target, incTransform, req_.register_start_resolution, req_.register_stop_resolution, corrSrc, corrTgt, 100, 0, 5 );
+		bool retVal = reg.estimateTransformation( *map_, target, incTransform, req_.register_start_resolution, req_.register_stop_resolution, corrSrc, corrTgt, 100 );
+#else
+		MultiResolutionSurfelRegistration reg;
 
-	//		incTransform.setIdentity();
+		Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
+		Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
+		prior_pose_variances(3) = prior_pose_variances(4) = 0.0001;
+		reg.setPriorPose( true, prior_pose_mean, prior_pose_variances );
+
+		bool retVal = reg.estimateTransformation( *map_, target, incTransform, req_.register_start_resolution, req_.register_stop_resolution, corrSrc, corrTgt, 100, 0, 5 );
+#endif
 
 
 			if( !retVal )

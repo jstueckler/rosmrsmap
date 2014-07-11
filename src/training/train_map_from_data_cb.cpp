@@ -1201,8 +1201,8 @@ void keyboardEventOccurred( const pcl::visualization::KeyboardEvent &event, void
 
 int main(int argc, char** argv) {
 
-	ros::init(argc, argv, "train_map_from_data");
-	ros::NodeHandle n("train_map_from_data");
+	ros::init(argc, argv, "~");
+	ros::NodeHandle n("~");
 	TrainObjectFromData tofd( n );
 
 	viewer = boost::shared_ptr<pcl::visualization::PCLVisualizer>( new pcl::visualization::PCLVisualizer( "3D Viewer" ) );
