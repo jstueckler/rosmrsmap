@@ -129,6 +129,8 @@ public:
 
 		register_map_ = false;
 
+		first_frame_ = false;
+
 		responseId_ = -1;
 
     }
@@ -157,6 +159,10 @@ public:
 
 			sub_cloud_ = nh_.subscribe( "input_cloud", 1, &RegisterMap::dataCallback, this );
 			register_map_ = true;
+
+			first_frame_ = true;
+
+			track_ = req.track;
 
 			ROS_INFO_STREAM( "subscribed at " << sub_cloud_.getTopic() );
 
@@ -213,7 +219,10 @@ public:
 		scene_mean4(3) = 1.0;
 		Eigen::Vector4d Tscene_mean4 = transform * scene_mean4;
 
-		transform.block<3,1>(0,3) += model_mean_ - Tscene_mean4.head<3>();
+		if( (track_ && first_frame_) || !track_ ) {
+			transform.block<3,1>(0,3) += model_mean_ - Tscene_mean4.head<3>();
+			first_frame_ = false;
+		}
 
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
@@ -261,6 +270,9 @@ public:
 
 		tf_broadcaster.sendTransform( object_tf );
 
+		if( track_ )
+			initial_pose_ = Eigen::Affine3d( transform.inverse().eval() );
+
 	}
 
 	void update() {
@@ -279,6 +291,8 @@ public:
 	tf::TransformBroadcaster tf_broadcaster;
 
 	bool register_map_;
+	bool track_;
+	bool first_frame_;
 
 	boost::shared_ptr< MultiResolutionSurfelMap > map_;
 	Eigen::Vector3d model_mean_;

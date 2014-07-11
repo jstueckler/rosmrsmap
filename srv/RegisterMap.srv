@@ -1,5 +1,6 @@
 string object_name
 geometry_msgs/Pose init_pose
+int8 track
 ---
 int32 responseId
 
