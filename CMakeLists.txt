@@ -4,7 +4,7 @@ project(rosmrsmap)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rosconsole pcl_ros pcl_msgs pcl_conversions cv_bridge sensor_msgs genmsg mrsmap tf_conversions eigen_conversions)
+find_package(catkin REQUIRED COMPONENTS roscpp rosconsole pcl_ros pcl_msgs pcl_conversions cv_bridge sensor_msgs genmsg mrsmap tf_conversions eigen_conversions image_geometry)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -36,12 +36,14 @@ include_directories(${CSPARSE_INCLUDE_DIR})
 add_message_files(
   FILES
   ObjectData.msg
+  ObjectTrackingData2.msg
 )
 
 add_service_files(
   FILES
   StringService.srv
   RegisterMap.srv
+  ObjectTrackingRequest.srv
 )
 
 generate_messages(
@@ -86,6 +88,13 @@ add_dependencies(train_map_from_data rosmrsmap_gencpp)
 target_link_libraries(train_map_from_data ${catkin_LIBRARIES} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D})
 
 
+add_executable(train_map_from_data_cb src/training/train_map_from_data_cb.cpp src/utilities/utilities.cpp)
+add_dependencies(train_map_from_data_cb rosmrsmap_gencpp)
+target_link_libraries(train_map_from_data_cb ${catkin_LIBRARIES} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D})
 
+
+add_executable(object_tracking_node src/perception/object_tracking_node.cpp src/utilities/utilities.cpp)
+add_dependencies(object_tracking_node rosmrsmap_gencpp)
+target_link_libraries(object_tracking_node ${catkin_LIBRARIES} )
 
 

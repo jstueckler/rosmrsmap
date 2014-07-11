@@ -1,0 +1,15 @@
+int32 requestId
+int32 enable
+string object_name 
+geometry_msgs/Pose pose_guess
+float32 pose_guess_max_x_dev # max deviations in base_link
+float32 pose_guess_max_y_dev
+float32 pose_guess_max_z_dev
+float32 pose_guess_max_roll_dev
+float32 pose_guess_max_pitch_dev
+float32 pose_guess_max_yaw_dev
+float32 register_start_resolution
+float32 register_stop_resolution
+int32 center_map
+---
+int32 responseId
