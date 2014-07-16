@@ -134,7 +134,7 @@ public:
 
 		first_frame_ = false;
 
-		responseId_ = -1;
+		responseId_ = 0;
 
     }
 
