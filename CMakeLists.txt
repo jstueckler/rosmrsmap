@@ -55,8 +55,8 @@ generate_messages(
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES rosmrsmap
-  CATKIN_DEPENDS cv_bridge opencv2 pcl_ros pcl_conversions roscpp rospy mrsmap tf_conversions eigen_conversions
+#  LIBRARIES rosmrsmap
+  CATKIN_DEPENDS cv_bridge pcl_ros pcl_conversions roscpp rospy mrsmap tf_conversions eigen_conversions
   DEPENDS system_lib
 )
 
