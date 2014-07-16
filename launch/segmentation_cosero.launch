@@ -1,0 +1,32 @@
+<launch>
+
+    	<rosparam file="$(find nimbro_launch)/config/global_parameters_dyna2.yaml" command="load" />
+    	<param name="robot_description" command="$(find xacro)/xacro.py $(find nimbro_simulation)/worlds/urdf/cosero/cosero.urdf.xacro" />
+
+    	<node pkg="robot_state_publisher" type="state_publisher" name="rob_st_pub" respawn="false" />
+
+	<node pkg="nimbro_kinematic_control" type="robot_control_node" name="robot_control" respawn="false" >
+        	<rosparam file="$(find nimbro_launch)/config/dynamaidcontrol_fully_connected.yaml" command="load" />
+        	<param name="enable_light" value="true" />
+
+        	<param name="enable_laser_tilt" value="false" />
+        	<param name="tilt_laser_sweep_up_target" value="-0.85" />
+        	<param name="tilt_laser_sweep_down_target" value="0.0" />
+
+        	<remap from="robot_control/joint_states" to="joint_states"/>
+	</node>
+
+
+
+        <include file="$(find nimbro_kinect)/launch/camera.launch">
+                <arg name="depth_mode" value="2" />
+        </include>
+
+        <include file="$(find nimbro_kinect)/launch/segmentation.launch">
+           <arg name="configfile" value="$(find rosmrsmap)/launch/config_segmentation_tabletop.yaml" />
+           <arg name="cloud_subsample_factor" value="4" />
+        </include>
+
+
+
+</launch>

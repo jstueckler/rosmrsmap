@@ -20,7 +20,7 @@ plane_fit:
 
 ## object_clusters: how objects on the support are clustered
 object_clusters:
-  distance_tolerance:    0.04   # points within this distance are merged (in m).
+  distance_tolerance:    0.1   # points within this distance are merged (in m).
   min_points:            15     # minimum number of points per cluster
   min_height:            0.01   # min height of points on support plane (in m)
   max_height:            0.5    # max height of points on support plane (in m)

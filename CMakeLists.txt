@@ -90,7 +90,7 @@ target_link_libraries(train_map_from_data ${catkin_LIBRARIES} ${G2O_CORE_LIBRARY
 
 add_executable(train_map_from_data_cb src/training/train_map_from_data_cb.cpp src/utilities/utilities.cpp)
 add_dependencies(train_map_from_data_cb rosmrsmap_gencpp)
-target_link_libraries(train_map_from_data_cb ${catkin_LIBRARIES} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D})
+target_link_libraries(train_map_from_data_cb ${catkin_LIBRARIES} ${G2O_CORE_LIBRARY} ${G2O_STUFF_LIBRARY} ${G2O_SOLVER_CSPARSE} ${G2O_SOLVER_CSPARSE_EXTENSION} ${G2O_TYPES_SLAM3D} vtkFiltering)
 
 
 add_executable(object_tracking_node src/perception/object_tracking_node.cpp src/utilities/utilities.cpp)

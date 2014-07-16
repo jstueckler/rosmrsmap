@@ -99,6 +99,7 @@
 
 
 #include <rosmrsmap/RegisterMap.h>
+#include <rosmrsmap/ObjectTrackingData2.h>
 #include <std_msgs/Int32.h>
 
 
@@ -120,6 +121,8 @@ public:
 		pub_scene_cloud = pcl_ros::Publisher<pcl::PointXYZRGB>(nh, "scene_cloud", 1);
 
 		pub_status_ = nh.advertise< std_msgs::Int32 >( "status", 1 );
+		
+		pub_result_ = nh.advertise< rosmrsmap::ObjectTrackingData2 >( "result", 1 );
 
 		tf_listener_ = boost::shared_ptr< tf::TransformListener >( new tf::TransformListener() );
 
@@ -163,6 +166,7 @@ public:
 			first_frame_ = true;
 
 			track_ = req.track;
+			once_ = req.once;
 
 			ROS_INFO_STREAM( "subscribed at " << sub_cloud_.getTopic() );
 
@@ -177,9 +181,43 @@ public:
 
 
 	void dataCallback(const sensor_msgs::PointCloud2ConstPtr& point_cloud) {
-
+		
 		if( !register_map_ )
 			return;
+
+		if( once_ && !first_frame_ ) {
+			
+			// just send out result/status
+			
+			std_msgs::Int32 status;
+			status.data = responseId_;
+			pub_status_.publish( status );
+
+			Eigen::Matrix4d transform = initial_pose_.matrix().inverse();
+			Eigen::Matrix4d objectTransform = transform.inverse();
+			Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
+
+			tf::StampedTransform object_tf;
+			object_tf.setIdentity();
+			object_tf.setRotation( tf::Quaternion( q.x(), q.y(), q.z(), q.w() ) );
+			object_tf.setOrigin( tf::Vector3( objectTransform(0,3), objectTransform(1,3), objectTransform(2,3) ) );
+
+			object_tf.stamp_ = point_cloud->header.stamp;
+			object_tf.child_frame_id_ = object_name_;
+			object_tf.frame_id_ = point_cloud->header.frame_id;
+
+			tf_broadcaster.sendTransform( object_tf );
+			
+			rosmrsmap::ObjectTrackingData2 msg;
+			msg.header = point_cloud->header;
+			msg.object_name = object_name_;
+			tf::poseEigenToMsg( Eigen::Affine3d( objectTransform ), msg.object_pose );
+			msg.requestID = responseId_;
+			pub_result_.publish( msg );
+			
+			return;
+			
+		}
 
 		ROS_INFO("registering");
 		pcl::StopWatch sw;
@@ -269,6 +307,13 @@ public:
 		object_tf.frame_id_ = point_cloud->header.frame_id;
 
 		tf_broadcaster.sendTransform( object_tf );
+		
+		rosmrsmap::ObjectTrackingData2 msg;
+		msg.header = point_cloud->header;
+		msg.object_name = object_name_;
+		tf::poseEigenToMsg( Eigen::Affine3d( objectTransform ), msg.object_pose );
+		msg.requestID = responseId_;
+		pub_result_.publish( msg );
 
 		if( track_ )
 			initial_pose_ = Eigen::Affine3d( transform.inverse().eval() );
@@ -285,7 +330,7 @@ public:
 
 	ros::NodeHandle nh_;
 	ros::Subscriber sub_cloud_;
-	ros::Publisher pub_status_;
+	ros::Publisher pub_status_, pub_result_;
 	pcl_ros::Publisher<pcl::PointXYZRGB> pub_model_cloud, pub_scene_cloud;
 	boost::shared_ptr< tf::TransformListener > tf_listener_;
 	tf::TransformBroadcaster tf_broadcaster;
@@ -293,6 +338,7 @@ public:
 	bool register_map_;
 	bool track_;
 	bool first_frame_;
+	bool once_;
 
 	boost::shared_ptr< MultiResolutionSurfelMap > map_;
 	Eigen::Vector3d model_mean_;

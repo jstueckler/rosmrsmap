@@ -1,0 +1,624 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 78
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /Status1
+        - /PointCloud21
+        - /PointCloud22
+        - /TF1
+        - /PointCloud23
+      Splitter Ratio: 0.5
+    Tree Height: 565
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Nav Goal1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.588679
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Experimental: false
+    Name: Time
+    SyncMode: 0
+    SyncSource: PointCloud2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grid
+      Normal Cell Count: 0
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Plane: XY
+      Plane Cell Count: 10
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /segmentation_node/closest_object_cloud
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /snapshot_map/output_cloud
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        base_footprint:
+          Value: true
+        base_laser:
+          Value: true
+        base_laser_link:
+          Value: true
+        base_link:
+          Value: true
+        basis_link:
+          Value: true
+        basis_link_viz:
+          Value: true
+        both_shoulders:
+          Value: true
+        brush:
+          Value: true
+        camera_link:
+          Value: true
+        dustpan:
+          Value: true
+        floor_laser:
+          Value: true
+        floor_laser_link:
+          Value: true
+        floor_link:
+          Value: true
+        front_left_left_wheel_link:
+          Value: true
+        front_left_right_wheel_link:
+          Value: true
+        front_left_roll_link:
+          Value: true
+        front_right_left_wheel_link:
+          Value: true
+        front_right_right_wheel_link:
+          Value: true
+        front_right_roll_link:
+          Value: true
+        head:
+          Value: true
+        head_link:
+          Value: true
+        head_link_viz:
+          Value: true
+        hokuyo_link:
+          Value: true
+        kinect_frame:
+          Value: true
+        kinect_optical_frame:
+          Value: true
+        laser_link:
+          Value: true
+        left_arm_base_link:
+          Value: true
+        left_arm_elbow_pitch_link:
+          Value: true
+        left_arm_endeffector_link:
+          Value: true
+        left_arm_shoulder_pitch_link:
+          Value: true
+        left_arm_shoulder_roll_link:
+          Value: true
+        left_arm_shoulder_yaw_link:
+          Value: true
+        left_arm_wrist_pitch_link:
+          Value: true
+        left_arm_wrist_roll_link:
+          Value: true
+        left_arm_wrist_yaw_link:
+          Value: true
+        left_block:
+          Value: true
+        left_camera:
+          Value: true
+        left_finger1:
+          Value: true
+        left_finger1_viz:
+          Value: true
+        left_finger2:
+          Value: true
+        left_finger2_viz:
+          Value: true
+        left_forearm:
+          Value: true
+        left_gripper_link:
+          Value: true
+        left_hand_link1:
+          Value: true
+        left_hand_link2:
+          Value: true
+        left_shoulder_link1:
+          Value: true
+        left_shoulder_link2:
+          Value: true
+        left_upper_arm:
+          Value: true
+        left_virtual_end:
+          Value: true
+        lift_link:
+          Value: true
+        mobile_manipulation_map:
+          Value: true
+        neck_base_link:
+          Value: true
+        neck_link:
+          Value: true
+        neck_pan_link:
+          Value: true
+        neck_tilt_link:
+          Value: true
+        odometry:
+          Value: true
+        openni_depth_frame:
+          Value: true
+        openni_depth_optical_frame:
+          Value: true
+        openni_link:
+          Value: true
+        openni_rgb_frame:
+          Value: true
+        openni_rgb_optical_frame:
+          Value: true
+        optical_frame:
+          Value: true
+        pan_link:
+          Value: true
+        pan_link_viz:
+          Value: true
+        pole_link:
+          Value: true
+        pole_link_viz:
+          Value: true
+        rear_left_left_wheel_link:
+          Value: true
+        rear_left_right_wheel_link:
+          Value: true
+        rear_left_roll_link:
+          Value: true
+        rear_right_left_wheel_link:
+          Value: true
+        rear_right_right_wheel_link:
+          Value: true
+        rear_right_roll_link:
+          Value: true
+        right_arm_base_link:
+          Value: true
+        right_arm_elbow_pitch_link:
+          Value: true
+        right_arm_endeffector_link:
+          Value: true
+        right_arm_shoulder_pitch_link:
+          Value: true
+        right_arm_shoulder_roll_link:
+          Value: true
+        right_arm_shoulder_yaw_link:
+          Value: true
+        right_arm_wrist_pitch_link:
+          Value: true
+        right_arm_wrist_roll_link:
+          Value: true
+        right_arm_wrist_yaw_link:
+          Value: true
+        right_block:
+          Value: true
+        right_camera:
+          Value: true
+        right_finger1:
+          Value: true
+        right_finger1_viz:
+          Value: true
+        right_finger2:
+          Value: true
+        right_finger2_viz:
+          Value: true
+        right_forearm:
+          Value: true
+        right_gripper_link:
+          Value: true
+        right_hand_link1:
+          Value: true
+        right_hand_link2:
+          Value: true
+        right_shoulder_link1:
+          Value: true
+        right_shoulder_link2:
+          Value: true
+        right_upper_arm:
+          Value: true
+        right_virtual_end:
+          Value: true
+        sick_link:
+          Value: true
+        swissranger:
+          Value: true
+        threed_laser_link:
+          Value: true
+        threed_laser_tilt_link:
+          Value: true
+        threed_laser_tilt_link_viz:
+          Value: true
+        torso_base_link:
+          Value: true
+        torso_cam_link:
+          Value: true
+        torso_cam_optical_frame:
+          Value: true
+        torso_chest_link:
+          Value: true
+        torso_elevator_link:
+          Value: true
+        torso_link:
+          Value: true
+        torso_pitch_laser_base_link:
+          Value: true
+        torso_pitch_laser_elevator_link:
+          Value: true
+        torso_pitch_laser_link:
+          Value: true
+        torso_pitch_laser_yaw_link:
+          Value: true
+        torso_roll_laser_base_link:
+          Value: true
+        torso_roll_laser_elevator_link:
+          Value: true
+        torso_roll_laser_link:
+          Value: true
+        torso_yaw_link:
+          Value: true
+      Marker Scale: 0.2
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: true
+      Tree:
+        odometry:
+          base_footprint:
+            base_link:
+              base_laser:
+                {}
+              basis_link:
+                base_laser_link:
+                  sick_link:
+                    {}
+                basis_link_viz:
+                  {}
+                floor_laser_link:
+                  floor_link:
+                    {}
+                front_left_roll_link:
+                  front_left_left_wheel_link:
+                    {}
+                  front_left_right_wheel_link:
+                    {}
+                front_right_roll_link:
+                  front_right_left_wheel_link:
+                    {}
+                  front_right_right_wheel_link:
+                    {}
+                pole_link:
+                  lift_link:
+                    pan_link:
+                      both_shoulders:
+                        left_shoulder_link1:
+                          left_shoulder_link2:
+                            left_upper_arm:
+                              left_forearm:
+                                left_hand_link1:
+                                  left_hand_link2:
+                                    left_gripper_link:
+                                      left_block:
+                                        {}
+                                      left_finger1:
+                                        left_finger1_viz:
+                                          {}
+                                      left_finger2:
+                                        left_finger2_viz:
+                                          {}
+                                      left_virtual_end:
+                                        {}
+                        neck_link:
+                          head_link:
+                            camera_link:
+                              openni_link:
+                                kinect_frame:
+                                  kinect_optical_frame:
+                                    {}
+                                openni_depth_frame:
+                                  openni_depth_optical_frame:
+                                    {}
+                                openni_rgb_frame:
+                                  openni_rgb_optical_frame:
+                                    brush:
+                                      {}
+                                    dustpan:
+                                      {}
+                              optical_frame:
+                                {}
+                            head_link_viz:
+                              {}
+                        right_shoulder_link1:
+                          right_shoulder_link2:
+                            right_upper_arm:
+                              right_forearm:
+                                right_hand_link1:
+                                  right_hand_link2:
+                                    right_gripper_link:
+                                      right_block:
+                                        {}
+                                      right_finger1:
+                                        right_finger1_viz:
+                                          {}
+                                      right_finger2:
+                                        right_finger2_viz:
+                                          {}
+                                      right_virtual_end:
+                                        {}
+                      hokuyo_link:
+                        laser_link:
+                          {}
+                      pan_link_viz:
+                        {}
+                      threed_laser_tilt_link:
+                        threed_laser_link:
+                          {}
+                        threed_laser_tilt_link_viz:
+                          {}
+                      torso_cam_link:
+                        torso_cam_optical_frame:
+                          {}
+                      torso_link:
+                        {}
+                  pole_link_viz:
+                    {}
+                rear_left_roll_link:
+                  rear_left_left_wheel_link:
+                    {}
+                  rear_left_right_wheel_link:
+                    {}
+                rear_right_roll_link:
+                  rear_right_left_wheel_link:
+                    {}
+                  rear_right_right_wheel_link:
+                    {}
+              floor_laser:
+                {}
+              left_arm_base_link:
+                {}
+              left_arm_elbow_pitch_link:
+                {}
+              left_arm_endeffector_link:
+                {}
+              left_arm_shoulder_pitch_link:
+                {}
+              left_arm_shoulder_roll_link:
+                {}
+              left_arm_shoulder_yaw_link:
+                {}
+              left_arm_wrist_pitch_link:
+                {}
+              left_arm_wrist_roll_link:
+                {}
+              left_arm_wrist_yaw_link:
+                {}
+              mobile_manipulation_map:
+                {}
+              neck_base_link:
+                {}
+              neck_pan_link:
+                {}
+              neck_tilt_link:
+                head:
+                  left_camera:
+                    {}
+                  right_camera:
+                    {}
+                swissranger:
+                  {}
+              right_arm_base_link:
+                {}
+              right_arm_elbow_pitch_link:
+                {}
+              right_arm_endeffector_link:
+                {}
+              right_arm_shoulder_pitch_link:
+                {}
+              right_arm_shoulder_roll_link:
+                {}
+              right_arm_shoulder_yaw_link:
+                {}
+              right_arm_wrist_pitch_link:
+                {}
+              right_arm_wrist_roll_link:
+                {}
+              right_arm_wrist_yaw_link:
+                {}
+              torso_base_link:
+                {}
+              torso_chest_link:
+                {}
+              torso_elevator_link:
+                {}
+              torso_pitch_laser_base_link:
+                {}
+              torso_pitch_laser_elevator_link:
+                {}
+              torso_pitch_laser_link:
+                {}
+              torso_pitch_laser_yaw_link:
+                {}
+              torso_roll_laser_base_link:
+                {}
+              torso_roll_laser_elevator_link:
+                {}
+              torso_roll_laser_link:
+                {}
+              torso_yaw_link:
+                {}
+      Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.01
+      Style: Flat Squares
+      Topic: /camera/depth_registered/points
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetInitialPose
+      Topic: /initialpose
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 1.58767
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Focal Point:
+        X: 0.761055
+        Y: -0.551321
+        Z: 0.461222
+      Name: Current View
+      Near Clip Distance: 0.01
+      Pitch: 0.575399
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz)
+      Yaw: 1.6204
+    Saved: ~
+Window Geometry:
+  Displays:
+    collapsed: false
+  Height: 846
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000004000000000000013c000002c4fc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000006400fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c0061007900730100000028000002c4000000dd00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000010f000002c4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730100000028000002c4000000b000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650100000000000004b0000002f600fffffffb0000000800540069006d0065010000000000000450000000000000000000000259000002c400000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  Selection:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: false
+  Width: 1200
+  X: 253
+  Y: 34

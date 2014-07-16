@@ -16,5 +16,6 @@
 		<arg name="input_cloud_topic" value="/segmentation_node/closest_object_cloud" />
 	</include>
 
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find rosmrsmap)/launch/register.rviz"/>
 	
 </launch>
