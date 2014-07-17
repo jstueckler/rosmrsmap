@@ -27,6 +27,9 @@
            <arg name="cloud_subsample_factor" value="4" />
         </include>
 
-
+		<node launch-prefix="" pkg="rosmrsmap" type="object_tracking_node" name="object_tracking_node" respawn="false" output="screen" >
+			<param name="object" value="wateringcan" />
+			<remap from="~input_cloud" to="/segmentation_node/closest_object_cloud" />
+		</node>
 
 </launch>

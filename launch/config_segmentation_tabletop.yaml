@@ -15,7 +15,7 @@ support_plane:
 
 ## allowed deviations for finding horizontal points and fitting planes (distance in m, angle in deg)
 plane_fit:
-  distance_deviation:   0.025
+  distance_deviation:   0.1
   axis_deviation:       20
 
 ## object_clusters: how objects on the support are clustered

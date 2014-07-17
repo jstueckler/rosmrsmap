@@ -62,6 +62,7 @@
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
+#include "../../../mrsmap/include/mrsmap/registration/multiresolution_surfel_registration.h"
 
 
 using namespace mrsmap;
@@ -116,6 +117,8 @@ public:
 
 		if(req_.enable == 0)
 			return;
+		
+		ROS_INFO_STREAM("got pc");
 
 		pcl::PointCloud<pcl::PointXYZRGB> pointCloudIn;
 
@@ -222,6 +225,8 @@ public:
 #if SOFT_REGISTRATION
 		MultiResolutionSoftSurfelRegistration reg;
 		
+		reg.params_.registration_use_color_ = false;
+		
 		Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
 		Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
 		prior_pose_variances(3) = prior_pose_variances(4) = 0.0001;
@@ -230,6 +235,8 @@ public:
 		bool retVal = reg.estimateTransformation( *map_, target, incTransform, req_.register_start_resolution, req_.register_stop_resolution, corrSrc, corrTgt, 100 );
 #else
 		MultiResolutionSurfelRegistration reg;
+		
+		reg.params_.registration_use_color_ = false;
 		
 		Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
 		Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
