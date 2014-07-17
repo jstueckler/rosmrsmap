@@ -208,9 +208,10 @@ public:
 			treeNodeAllocator_->reset();
 			MultiResolutionSurfelMap target( map_->min_resolution_, map_->max_range_, treeNodeAllocator_ );
 			target.imageAllocator_ = imageAllocator_;
-			target.addImage( *transformedCloud, false );
+//			target.addImage( *transformedCloud, false );
+			target.addPoints( *transformedCloud, indices );
 			target.octree_->root_->establishNeighbors();
-			target.markNoUpdateAtPoints( *transformedCloud, imageBorderIndices );
+//			target.markNoUpdateAtPoints( *transformedCloud, imageBorderIndices );
 			target.evaluateSurfels();
 			target.buildShapeTextureFeatures();
 
@@ -220,21 +221,21 @@ public:
 
 #if SOFT_REGISTRATION
 		MultiResolutionSoftSurfelRegistration reg;
-
+		
 		Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
 		Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
 		prior_pose_variances(3) = prior_pose_variances(4) = 0.0001;
 		reg.setPriorPose( true, prior_pose_mean, prior_pose_variances );
-
+		
 		bool retVal = reg.estimateTransformation( *map_, target, incTransform, req_.register_start_resolution, req_.register_stop_resolution, corrSrc, corrTgt, 100 );
 #else
 		MultiResolutionSurfelRegistration reg;
-
+		
 		Eigen::Matrix< double, 6, 1 > prior_pose_mean = Eigen::Matrix< double, 6, 1 >::Zero();
 		Eigen::Matrix< double, 6, 1 > prior_pose_variances = 1.0 * Eigen::Matrix< double, 6, 1 >::Ones();
 		prior_pose_variances(3) = prior_pose_variances(4) = 0.0001;
 		reg.setPriorPose( true, prior_pose_mean, prior_pose_variances );
-
+		
 		bool retVal = reg.estimateTransformation( *map_, target, incTransform, req_.register_start_resolution, req_.register_stop_resolution, corrSrc, corrTgt, 100, 0, 5 );
 #endif
 
@@ -245,8 +246,7 @@ public:
 
 			double deltat = sw.getTime();
 
-
-//			std::cout << "registration took: " << deltat << "\n";
+			ROS_INFO_STREAM( "registration took: " << deltat );
 
 			if( retVal && !isnan(incTransform(0,0)) ) {
 
@@ -349,7 +349,7 @@ public:
 	}
 
 	bool objectTrackingRequestReceived( rosmrsmap::ObjectTrackingRequest::Request &req, rosmrsmap::ObjectTrackingRequest::Response &res ) {
-
+		
 		req_ = req;
 
 		if( req.enable == 0 )
@@ -359,13 +359,13 @@ public:
 
 		map_->setApplyUpdate( true );
 		map_->octree_->root_->establishNeighbors();
-		map_->setUpToDate(false);
+//		map_->setUpToDate(false);
 		map_->buildShapeTextureFeatures();
 
 		map_->extents( map_mean_, map_cov_ );
 		map_cov_inv_ = map_cov_.inverse();
 
-		std::cout << map_mean_ << "\n";
+		ROS_INFO_STREAM( map_mean_ );
 
 		// convert geometry_msg/Pose to Eigen
 		req_transform_guess_.setIdentity();
@@ -403,7 +403,7 @@ public:
 		baseEigenTransform(1,3) = baseTransform.getOrigin().y();
 		baseEigenTransform(2,3) = baseTransform.getOrigin().z();
 
-		std::cout << baseEigenTransform << "\n";
+		ROS_INFO_STREAM( baseEigenTransform );
 
 		Eigen::Matrix4f objInMapTransform;
 		objInMapTransform.setIdentity();

@@ -1,0 +1,13 @@
+<launch>
+
+        <include file="$(find nimbro_kinect)/launch/camera.launch">
+                <arg name="image_mode" value="2" />
+                <arg name="depth_mode" value="2" />
+        </include>
+
+		<include file="$(find rosmrsmap)/launch/collect_data.launch">
+		</include>
+	
+		<node pkg="tf" type="static_transform_publisher" name="base_link" args="0 0 1.2 0 1.0 0.0 base_link camera_link 100" />
+
+</launch>

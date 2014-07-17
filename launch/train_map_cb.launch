@@ -5,39 +5,19 @@
   <!-- xterm -e cgdb -args -->
 	<node launch-prefix="" pkg="rosmrsmap" type="train_map_from_data_cb" name="train_map_from_data_cb" respawn="false" output="screen" >
 		<param name="object" value="wateringcan" />
-		<param name="bag" value="/home/stueckler/.ros/rgbd.bag" />
+		<param name="bag" value="/home/stueckler/.ros/wateringcan.bag" />
         <param name="start_frame" value="0" />
         <param name="end_frame" value="800" />
         <param name="load_map" value="false" />
 		<param name="min_height" value="0.02" />
-<!--		<param name="min_height" value="0.25" /> -->
 		<param name="max_height" value="1.0" />
 		<param name="min_resolution" value="0.0125" />
 		<param name="low_motion" value="true" />
 		
-		<param name="use_cb" value="false" />
+		<param name="use_cb" value="true" />
         <param name="board_width" value="5" />
         <param name="board_height" value="4" />
-        <param name="board_square_size" value="0.038" />
-		
-		<!-- object smoslam dataset 
-		<param name="mocap_camdiff_t_x" value="-0.02490" />
-		<param name="mocap_camdiff_t_y" value="-0.15163" />
-		<param name="mocap_camdiff_t_z" value="-0.04474" />
-		<param name="mocap_camdiff_q_w" value="0.12404" />
-		<param name="mocap_camdiff_q_x" value="-0.34005" />
-		<param name="mocap_camdiff_q_y" value="-0.35328" />
-		<param name="mocap_camdiff_q_z" value="0.86265" />
-		-->
-		
-		<!-- objecttracking dataset -->
-		<param name="mocap_camdiff_t_x" value="-0.01303" />
-		<param name="mocap_camdiff_t_y" value="-0.14200" />
-		<param name="mocap_camdiff_t_z" value="-0.04437" />
-		<param name="mocap_camdiff_q_w" value="0.15821" />
-		<param name="mocap_camdiff_q_x" value="-0.71059" />
-		<param name="mocap_camdiff_q_y" value="0.14478" />
-		<param name="mocap_camdiff_q_z" value="-0.67013" />
+        <param name="board_square_size" value="0.0365" />
 		
 
 	</node>
