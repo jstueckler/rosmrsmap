@@ -1,5 +1,6 @@
 string object_name
 geometry_msgs/Pose init_pose
+string init_frame
 int8 track
 int8 once
 ---

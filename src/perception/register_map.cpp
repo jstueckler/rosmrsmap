@@ -81,7 +81,7 @@
 
 #include <mrsmap/map/multiresolution_surfel_map.h>
 
-#define SOFT_REGISTRATION 0
+#define SOFT_REGISTRATION 1
 #if SOFT_REGISTRATION
 #include <mrsmap/registration/multiresolution_soft_surfel_registration.h>
 #else
@@ -138,11 +138,72 @@ public:
 
     }
 
+    inline bool lookupTransform(const std::string &target_frame,
+                              const std::string &source_frame,
+                              Eigen::Matrix4f &transform,
+                              const ros::Time& stamp = ros::Time(0))
+    {
+       tf::StampedTransform ros_transform;
+       try
+       {
+         //        tf_listener_->lookupTransform (target_frame, cloud_in.header.frame_id, ros::Time(0), ros_transform);
+         //        ROS_ERROR("%f", (ros::Time::now()-cloud_in.header.stamp).toSec());
+         tf_listener_->waitForTransform( target_frame, source_frame, stamp, ros::Duration(0.1));
+         tf_listener_->lookupTransform (target_frame, source_frame, stamp, ros_transform);
+       }
+       catch (tf::LookupException &e)
+       {
+         ROS_ERROR ("%s", e.what ());
+         return (false);
+       }
+       catch (tf::ExtrapolationException &e)
+       {
+         ROS_ERROR ("%s", e.what ());
+         try
+         {
+           tf_listener_->lookupTransform (target_frame, source_frame, ros::Time(0), ros_transform);
+         }
+         catch (tf::LookupException &e)
+         {
+           ROS_ERROR ("%s", e.what ());
+           return (false);
+         }
+         catch (...)
+         {
+           ROS_ERROR ("UNKNOWN EXCEPTION");
+           return false;
+         }
+         //        ROS_ERROR ("%s", e.what ());
+         //        return (false);
+       }
+       catch (const tf::ConnectivityException& e)
+       {
+         ROS_ERROR ("%s", e.what ());
+         return (false);
+       }
+       catch ( const std::exception& e )
+       {
+         ROS_ERROR ("%s", e.what ());
+         return (false);
+       }
+       catch (...)
+       {
+         ROS_ERROR ("UNKNOWN EXCEPTION");
+         return (false);
+       }
+
+       pcl_ros::transformAsMatrix(ros_transform, transform);
+
+       return (true);
+    }
+
 
 	bool registerRequest( rosmrsmap::RegisterMap::Request &req, rosmrsmap::RegisterMap::Response &res ) {
 
 		object_name_ = req.object_name;
 		tf::poseMsgToEigen( req.init_pose, initial_pose_ );
+
+		init_frame_ = req.init_frame;
 
 		if( object_name_ == "" ) {
 			sub_cloud_.shutdown();
@@ -243,9 +304,26 @@ public:
 		currMap->evaluateSurfels();
 		currMap->buildShapeTextureFeatures();
 
+		Eigen::Affine3d initPose = initial_pose_;
+		if( !track_ || (track_ && first_frame_) ) {
+
+			// transform init pose to camera frame
+			if( init_frame_ != "" ) {
+
+				ROS_INFO_STREAM( "using init frame " << init_frame_ << std::endl );
+
+				Eigen::Matrix4f init_frame_transform;
+				if( lookupTransform( init_frame_, point_cloud->header.frame_id, init_frame_transform, point_cloud->header.stamp ) ) {
+					initPose = Eigen::Affine3d(init_frame_transform.cast<double>().inverse() * initial_pose_.matrix());
+				}
+			}
+
+		}
+
+
 		// register scene to model
 //		Eigen::Matrix4d transform = Eigen::Matrix4d::Identity();
-		Eigen::Matrix4d transform = initial_pose_.matrix().inverse();
+		Eigen::Matrix4d transform = initPose.matrix().inverse();
 
 		// initialize alignment by shifting the map centroids
 		Eigen::Vector3d scene_mean;
@@ -339,6 +417,8 @@ public:
 	bool track_;
 	bool first_frame_;
 	bool once_;
+
+	std::string init_frame_;
 
 	boost::shared_ptr< MultiResolutionSurfelMap > map_;
 	Eigen::Vector3d model_mean_;

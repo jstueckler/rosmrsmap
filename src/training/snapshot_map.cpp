@@ -122,6 +122,8 @@ public:
 
 		nh.param<std::string>( "map_folder", map_folder_, "." );
 
+		nh.param<std::string>( "init_frame", init_frame_, "" );
+
 		create_map_ = false;
 
 		responseId_ = -1;
@@ -202,7 +204,31 @@ public:
 
 		map_->save( map_folder_ + "/" + object_name_ + ".map" );
 
+		if( init_frame_ != "" ) {
+
+			ROS_INFO_STREAM( "using init frame " << init_frame_ << std::endl );
+
+			try {
+
+				tf::StampedTransform tf;
+				tf_listener_->lookupTransform( init_frame_, point_cloud->header.frame_id, point_cloud->header.stamp, tf );
+
+								Eigen::Affine3d init_frame_transform;
+								tf::transformTFToEigen( tf, init_frame_transform );
+
+				objectTransform = (init_frame_transform.matrix() * objectTransform).eval();
+
+
+			}
+				catch (tf::TransformException ex){
+				ROS_ERROR("%s",ex.what());
+			}
+
+
+		}
+
 		{
+
 			Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
 
 			std::ofstream initPoseFile( map_folder_ + "/" + object_name_ + ".pose" );
@@ -226,7 +252,12 @@ public:
 
 		object_tf_.stamp_ = point_cloud->header.stamp;
 		object_tf_.child_frame_id_ = object_name_;
-		object_tf_.frame_id_ = point_cloud->header.frame_id;
+
+		if( init_frame_ == "" ) {
+			object_tf_.frame_id_ = point_cloud->header.frame_id;
+		}
+		else
+			object_tf_.frame_id_ = init_frame_;
 
 		tf_broadcaster.sendTransform( object_tf_ );
 
@@ -277,6 +308,7 @@ public:
 
 	std::string map_folder_;
 	std::string object_name_;
+	std::string init_frame_;
 
 	boost::shared_ptr< MultiResolutionSurfelMap > map_;
 	tf::StampedTransform object_tf_;
