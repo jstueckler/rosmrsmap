@@ -81,12 +81,10 @@
 
 #include <mrsmap/map/multiresolution_surfel_map.h>
 
-#define SOFT_REGISTRATION 1
-#if SOFT_REGISTRATION
 #include <mrsmap/registration/multiresolution_soft_surfel_registration.h>
-#else
 #include <mrsmap/registration/multiresolution_surfel_registration.h>
-#endif
+
+#include <mrsmap/utilities/utilities.h>
 
 #include <boost/thread/thread.hpp>
 #include "pcl/common/common_headers.h"
@@ -100,6 +98,7 @@
 
 #include <rosmrsmap/RegisterMap.h>
 #include <rosmrsmap/ObjectTrackingData2.h>
+#include <rosmrsmap/RegisterMapStatus.h>
 #include <std_msgs/Int32.h>
 
 
@@ -120,7 +119,7 @@ public:
 		pub_model_cloud = pcl_ros::Publisher<pcl::PointXYZRGB>(nh, "model_cloud", 1);
 		pub_scene_cloud = pcl_ros::Publisher<pcl::PointXYZRGB>(nh, "scene_cloud", 1);
 
-		pub_status_ = nh.advertise< std_msgs::Int32 >( "status", 1 );
+		pub_status_ = nh.advertise< rosmrsmap::RegisterMapStatus >( "status", 1 );
 		
 		pub_result_ = nh.advertise< rosmrsmap::ObjectTrackingData2 >( "result", 1 );
 
@@ -135,6 +134,8 @@ public:
 		first_frame_ = false;
 
 		responseId_ = 0;
+
+		has_transform_ = false;
 
     }
 
@@ -203,6 +204,9 @@ public:
 		object_name_ = req.object_name;
 		tf::poseMsgToEigen( req.init_pose, initial_pose_ );
 
+		lastObjectTransform_.setIdentity();
+		has_transform_ = false;
+
 		init_frame_ = req.init_frame;
 
 		if( object_name_ == "" ) {
@@ -241,36 +245,42 @@ public:
 	}
 
 
-	void dataCallback(const sensor_msgs::PointCloud2ConstPtr& point_cloud) {
+	void update() {
 		
-		if( !register_map_ )
+		if( !register_map_ || !has_transform_ )
 			return;
 
 		if( once_ && !first_frame_ ) {
 			
 			// just send out result/status
 			
-			std_msgs::Int32 status;
-			status.data = responseId_;
-			pub_status_.publish( status );
-
-			Eigen::Matrix4d transform = initial_pose_.matrix().inverse();
-			Eigen::Matrix4d objectTransform = transform.inverse();
-			Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
-
 			tf::StampedTransform object_tf;
+
+			Eigen::Matrix4d objectTransform = lastObjectTransform_;
+
+			object_tf.stamp_ = ros::Time::now();
+			object_tf.child_frame_id_ = object_name_;
+			object_tf.frame_id_ = output_frame_;
+
+			Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
 			object_tf.setIdentity();
 			object_tf.setRotation( tf::Quaternion( q.x(), q.y(), q.z(), q.w() ) );
 			object_tf.setOrigin( tf::Vector3( objectTransform(0,3), objectTransform(1,3), objectTransform(2,3) ) );
 
-			object_tf.stamp_ = point_cloud->header.stamp;
-			object_tf.child_frame_id_ = object_name_;
-			object_tf.frame_id_ = point_cloud->header.frame_id;
-
 			tf_broadcaster.sendTransform( object_tf );
 			
+
+			rosmrsmap::RegisterMapStatus status;
+			status.header.stamp = object_tf.stamp_;
+			status.header.frame_id = object_tf.frame_id_;
+			status.response_id = responseId_;
+			status.confidence = lastConfidence_;
+			pub_status_.publish( status );
+
+
 			rosmrsmap::ObjectTrackingData2 msg;
-			msg.header = point_cloud->header;
+			msg.header.stamp = object_tf.stamp_;
+			msg.header.frame_id = object_tf.frame_id_;
 			msg.object_name = object_name_;
 			tf::poseEigenToMsg( Eigen::Affine3d( objectTransform ), msg.object_pose );
 			msg.requestID = responseId_;
@@ -278,6 +288,18 @@ public:
 			
 			return;
 			
+		}
+
+	}
+
+
+	void dataCallback(const sensor_msgs::PointCloud2ConstPtr& point_cloud) {
+
+		if( !register_map_ )
+			return;
+
+		if( once_ && !first_frame_ ) {
+			return;
 		}
 
 		ROS_INFO("registering");
@@ -291,14 +313,23 @@ public:
 		// create mrsmap from pointcloud
 		treeNodeAllocator_->reset();
 		boost::shared_ptr< MultiResolutionSurfelMap > currMap = boost::shared_ptr< MultiResolutionSurfelMap >( new MultiResolutionSurfelMap( map_->min_resolution_, map_->max_range_, treeNodeAllocator_ ) );
+		currMap->imageAllocator_ = imageAllocator_;
 
 		currMap->params_.dist_dependency = dist_dep_;
 
-		std::vector< int > pointIndices( pointCloudIn->points.size() );
-		for( unsigned int i = 0; i < pointIndices.size(); i++ ) pointIndices[i] = i;
 
 		std::vector< int > imageBorderIndices;
-		currMap->addPoints( *pointCloudIn, pointIndices );
+
+//		std::vector< int > pointIndices( pointCloudIn->points.size() );
+//		for( unsigned int i = 0; i < pointIndices.size(); i++ ) pointIndices[i] = i;
+//		currMap->addPoints( *pointCloudIn, pointIndices );
+
+		cv::Mat img_rgb( 480, 640, CV_8UC3, 0.f );
+		cv::Mat img_depth( 480, 640, CV_16UC1, 0.f );
+		mrsmap::reprojectPointCloudToImages( pointCloudIn, img_rgb, img_depth );
+		mrsmap::imagesToPointCloud( img_depth, img_rgb, "0", pointCloudIn );
+		currMap->addImage( *pointCloudIn, false, true );
+
 		currMap->octree_->root_->establishNeighbors();
 		currMap->markNoUpdateAtPoints( *pointCloudIn, imageBorderIndices );
 		currMap->evaluateSurfels();
@@ -343,13 +374,14 @@ public:
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrSrc;
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr corrTgt;
 
-#if SOFT_REGISTRATION
+//#if SOFT_REGISTRATION
 		MultiResolutionSoftSurfelRegistration reg;
+		reg.params_.match_likelihood_use_color_ = false;
 		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100 );
-#else
-		MultiResolutionSurfelRegistration reg;
-		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
-#endif
+//#else
+//		MultiResolutionSurfelRegistration reg;
+//		reg.estimateTransformation( *map_, *currMap, transform, 32.f * currMap->min_resolution_, currMap->min_resolution_, corrSrc, corrTgt, 100, 0, 5 );
+//#endif
 
 		ROS_INFO_STREAM( "registering took " << sw.getTimeSeconds() );
 
@@ -367,41 +399,91 @@ public:
 //		pcl::transformPointCloud( *cloudv2, *cloudv2, transform );
 		pub_scene_cloud.publish( cloudv2 );
 
-		std_msgs::Int32 status;
-		status.data = responseId_;
-		pub_status_.publish( status );
-
-
-		Eigen::Matrix4d objectTransform = transform.inverse();
-		Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
 
 		tf::StampedTransform object_tf;
+
+		Eigen::Matrix4d objectTransform = transform.inverse();
+
+		Eigen::Matrix4f cameraToInitTransform = Eigen::Matrix4f::Identity();
+		if( lookupTransform( init_frame_, point_cloud->header.frame_id, cameraToInitTransform, point_cloud->header.stamp ) ) {
+
+			objectTransform =  (cameraToInitTransform.cast<double>() * objectTransform).eval();
+
+			object_tf.stamp_ = point_cloud->header.stamp;
+			object_tf.child_frame_id_ = object_name_;
+			object_tf.frame_id_ = init_frame_;
+
+			output_frame_ = init_frame_;
+
+		}
+		else {
+
+			object_tf.stamp_ = point_cloud->header.stamp;
+			object_tf.child_frame_id_ = object_name_;
+			object_tf.frame_id_ = point_cloud->header.frame_id;
+
+			output_frame_ = point_cloud->header.frame_id;
+
+		}
+
+		Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
 		object_tf.setIdentity();
 		object_tf.setRotation( tf::Quaternion( q.x(), q.y(), q.z(), q.w() ) );
 		object_tf.setOrigin( tf::Vector3( objectTransform(0,3), objectTransform(1,3), objectTransform(2,3) ) );
 
-		object_tf.stamp_ = point_cloud->header.stamp;
-		object_tf.child_frame_id_ = object_name_;
-		object_tf.frame_id_ = point_cloud->header.frame_id;
-
 		tf_broadcaster.sendTransform( object_tf );
-		
+
+		lastObjectTransform_ = objectTransform;
+
+		has_transform_ = true;
+
+
+
+		double confidence = 1.0;
+
+		// determine confidence using matching likelihood
+		MultiResolutionSurfelRegistration reg_hard;
+		reg_hard.params_.match_likelihood_use_color_ = false;
+		reg_hard.params_.model_visibility_max_depth_ = 13;
+
+		double matchLogLikelihood = reg_hard.matchLogLikelihood( *map_, *currMap, transform );
+		double selfLogLikelihood = reg_hard.selfMatchLogLikelihood( *map_ );
+
+		confidence = std::min( 1.0, std::max( 0.0, 4.0 * (matchLogLikelihood / selfLogLikelihood - 0.5) ) );
+
+//		ROS_INFO_STREAM( "detection match log likelihood: " << matchLogLikelihood );
+//		ROS_INFO_STREAM( "detection self log likelihood: " << selfLogLikelihood );
+//		ROS_INFO_STREAM( "detection confidence: " << confidence );
+
+
+		lastConfidence_ = confidence;
+
+
+
+
+
+		rosmrsmap::RegisterMapStatus status;
+		status.header.stamp = object_tf.stamp_;
+		status.header.frame_id = object_tf.frame_id_;
+		status.response_id = responseId_;
+		status.confidence = lastConfidence_;
+		pub_status_.publish( status );
+
 		rosmrsmap::ObjectTrackingData2 msg;
-		msg.header = point_cloud->header;
+		msg.header.stamp = object_tf.stamp_;
+		msg.header.frame_id = object_tf.frame_id_;
 		msg.object_name = object_name_;
 		tf::poseEigenToMsg( Eigen::Affine3d( objectTransform ), msg.object_pose );
 		msg.requestID = responseId_;
 		pub_result_.publish( msg );
+
 
 		if( track_ )
 			initial_pose_ = Eigen::Affine3d( transform.inverse().eval() );
 
 	}
 
-	void update() {
 
-
-	}
 
 
 public:
@@ -417,8 +499,9 @@ public:
 	bool track_;
 	bool first_frame_;
 	bool once_;
+	bool has_transform_;
 
-	std::string init_frame_;
+	std::string init_frame_, output_frame_;
 
 	boost::shared_ptr< MultiResolutionSurfelMap > map_;
 	Eigen::Vector3d model_mean_;
@@ -429,6 +512,9 @@ public:
 	std::string map_folder_;
 	std::string object_name_;
 	Eigen::Affine3d initial_pose_;
+
+	Eigen::Matrix4d lastObjectTransform_;
+	double lastConfidence_;
 
 	double dist_dep_;
 

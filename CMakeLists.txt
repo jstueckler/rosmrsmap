@@ -37,6 +37,7 @@ add_message_files(
   FILES
   ObjectData.msg
   ObjectTrackingData2.msg
+  RegisterMapStatus.msg
 )
 
 add_service_files(
@@ -44,6 +45,7 @@ add_service_files(
   StringService.srv
   RegisterMap.srv
   ObjectTrackingRequest.srv
+  
 )
 
 generate_messages(

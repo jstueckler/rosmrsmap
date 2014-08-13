@@ -1,0 +1,3 @@
+Header header
+int32 response_id
+float64 confidence
