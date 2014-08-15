@@ -286,6 +286,10 @@ public:
 			msg.requestID = responseId_;
 			pub_result_.publish( msg );
 			
+
+			// visualize model
+			pub_model_cloud.publish( model_cloud_ );
+
 			return;
 			
 		}
@@ -385,13 +389,6 @@ public:
 
 		ROS_INFO_STREAM( "registering took " << sw.getTimeSeconds() );
 
-		// visualize model
-		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
-		cloudv->header = pointCloudIn->header;
-		map_->visualize3DColorDistribution( cloudv, -1, -1, false );
-		pcl::transformPointCloud( *cloudv, *cloudv, transform.inverse().cast<float>() );
-		pub_model_cloud.publish( cloudv );
-
 		// visualize scene
 		pcl::PointCloud< pcl::PointXYZRGB >::Ptr cloudv2 = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
 		cloudv2->header = pointCloudIn->header;
@@ -426,6 +423,16 @@ public:
 
 		}
 
+		// visualize model
+		model_cloud_ = pcl::PointCloud< pcl::PointXYZRGB >::Ptr( new pcl::PointCloud< pcl::PointXYZRGB >() );
+		model_cloud_->header = pointCloudIn->header;
+		map_->visualize3DColorDistribution( model_cloud_, -1, -1, false );
+		pcl::transformPointCloud( *model_cloud_, *model_cloud_, objectTransform.cast<float>() );
+		model_cloud_->header.frame_id = object_tf.frame_id_;
+		pub_model_cloud.publish( model_cloud_ );
+		ROS_ERROR_STREAM("model cloud size " << model_cloud_->points.size() );
+		ROS_ERROR_STREAM("frame_id " << model_cloud_->header.frame_id );
+
 		Eigen::Quaterniond q( objectTransform.block<3,3>(0,0) );
 		object_tf.setIdentity();
 		object_tf.setRotation( tf::Quaternion( q.x(), q.y(), q.z(), q.w() ) );
@@ -451,9 +458,9 @@ public:
 
 		confidence = std::min( 1.0, std::max( 0.0, 4.0 * (matchLogLikelihood / selfLogLikelihood - 0.5) ) );
 
-//		ROS_INFO_STREAM( "detection match log likelihood: " << matchLogLikelihood );
-//		ROS_INFO_STREAM( "detection self log likelihood: " << selfLogLikelihood );
-//		ROS_INFO_STREAM( "detection confidence: " << confidence );
+		ROS_INFO_STREAM( "detection match log likelihood: " << matchLogLikelihood );
+		ROS_INFO_STREAM( "detection self log likelihood: " << selfLogLikelihood );
+		ROS_INFO_STREAM( "detection confidence: " << confidence );
 
 
 		lastConfidence_ = confidence;
@@ -494,6 +501,8 @@ public:
 	pcl_ros::Publisher<pcl::PointXYZRGB> pub_model_cloud, pub_scene_cloud;
 	boost::shared_ptr< tf::TransformListener > tf_listener_;
 	tf::TransformBroadcaster tf_broadcaster;
+
+	pcl::PointCloud< pcl::PointXYZRGB >::Ptr model_cloud_;
 
 	bool register_map_;
 	bool track_;
